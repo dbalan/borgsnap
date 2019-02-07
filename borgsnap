@@ -79,6 +79,12 @@ source "$1"
 BORG_PASSPHRASE=$(< "$PASS")
 export BORG_PASSPHRASE
 
+if [[ $(uname) == "FreeBSD" ]]; then
+  MOUNT_CMD="mount -t nullfs"
+else
+  MOUNT_CMD="mount --bind"
+fi
+
 dow=$(date +"%w")
 dom=$(date +"%d")
 date=$(date +"%Y%m%d")
@@ -105,13 +111,13 @@ dobackup() {
   # $1 - volume, i.e. zroot/home
   # $2 - label, i.e. month-20170602
   # Expects borgdir, rsyncdir, BINDDIR
-
+  
   mount=$(zfs get -H -o value mountpoint "$1")
 
   echo "------ $(date) ------"
   bind_dir="${BINDDIR}/${1}"
   mkdir -p "$bind_dir"
-  mount --bind "${mount}/.zfs/snapshot/${2}" "$bind_dir"
+  ${MOUNT_CMD} "${mount}/.zfs/snapshot/${2}" "$bind_dir"
   BORG_OPTS="--info --stats --compression lz4 --exclude-if-present .noborg"
   if [[ -n $borgdir ]]; then
     echo "Doing local backup of ${1}@${2}"
